@@ -59,7 +59,7 @@ protoviewer.parse_proto = function(text, ii) {
     if (!ii) {
         ii = 0;
     }
-    ii = protoviewer.consumeWhitespace(text, ii);
+    ii = protoviewer.consume_whitespace(text, ii);
     var has_braces = false;
     if (text.charAt(ii) == "{") {
         has_braces = true;
@@ -81,18 +81,23 @@ protoviewer.parse_proto = function(text, ii) {
 };
 
 protoviewer.parse_body = function(text, ii) {
+    if (!ii) {
+        ii = 0;
+    }
     var result = {
         "value": {},
         "position": ii,
         "error": null,
     };
     while (text.length > ii) {
+        console.log("ii = " + ii);
         ii = protoviewer.consume_comments(text, ii);
         var name = protoviewer.parse_token(text, ii, /* include_brackets=*/true);
         if (name.error) {
             result.error = name.error;
             break;
         }
+        ii = name.position;
         ii = protoviewer.consume_comments(text, ii);
         if (text.charAt(ii) == ":") {
             ii++;
@@ -102,36 +107,43 @@ protoviewer.parse_body = function(text, ii) {
         if (value.error) {
             result.error = value.error;
             break;
-        }
+        } 
+        ii = value.position;
         ii = protoviewer.consume_comments(text, ii);
         if (!(name in result.value)) {
-            result.value[name] = [];
+            result.value[name.value] = [];
         }
-        result.value[name].push(value);
+        result.value[name.value].push(value.value);
     }
     result.position = ii;
     return result;
 };
 
 protoviewer.parse_token = function(text, ii, should_include_brackets) {
+    if (!ii) {
+        ii = 0;
+    }
     var result;
     if (text.charAt(ii) == '"' || text.charAt(ii) == "'") {
         result = protoviewer.parse_string(text, ii);
     } else {
         var regexp = /\w/;
         if (should_include_brackets) {
-            regexp = /\w\[\]/;
+            regexp = /[\w\[\]]/;
         }
-        result = protoviewer.consume_regexp(regexp);
+        result = protoviewer.consume_regexp(text, ii, regexp);
         result.error = null;
     }
     if (!result.value) {
-        result.error = "Error parsing item, no name found: " + ii;
+        result.error = "Error parsing token at: " + ii + " = " + text.charAt(ii);
     }
     return result;
 };
 
 protoviewer.parse_value = function(text, ii) {
+    if (!ii) {
+        ii = 0;
+    }
     if (text.charAt(ii) == "{") {
         // proto
         return protoviewer.parse_proto(text, ii);
