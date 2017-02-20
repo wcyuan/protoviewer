@@ -172,7 +172,7 @@ protoviewer.parse_string = function(text, ii) {
         result.position = jj;
     }
     return result;
-}
+};
 
 protoviewer.parse_value = function(text, ii) {
     if (!ii) {
@@ -221,5 +221,49 @@ protoviewer.parse_list = function(text, ii) {
         ii = protoviewer.consume_comments(text, ii);
     }
     return result;
+};
+
+// ------------------------------------------------------------------ //
+
+protoviewer.set_toggle_display = function(button_id, div_id) {
+	var button = document.getElementById(button_id);
+	this.addEventListener(button, "click", function() {
+		protoviewer.toggle_display(div_id);
+	});
+	return this;
+};
+
+protoviewer.toggle_display = function(div_id) {
+	var div_elt = document.getElementById(div_id);
+	var display = div_elt.style.display;
+	if (display == "none") {
+		div_elt.style.display = "inline";
+	} else {
+		div_elt.style.display = "none";
+	}
+	return div_elt;
+};
+
+protoviewer.addEventListener = function(elt, type, func) {
+    if (elt.addEventListener) {
+        elt.addEventListener(type, func, false);
+        return true;
+    } else if (elt.attachEvent) {
+        return elt.attachEvent("on" + type, func);
+    } else {
+        return false;
+    }
 }
+
+protoviewer.main = function() {
+    var parse_button = document.getElementById("parse");
+    addEventListener(parse_button, "click", function() {
+        var input = document.getElementById("input");
+        proto = protoviewer.parse_proto(input.value);
+    });
+}
+
+protoviewer.main();
+
+
 
