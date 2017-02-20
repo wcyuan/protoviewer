@@ -2,7 +2,7 @@
 // #
 // # ROOT = PROTO | BODY
 // # PROTO = '{' BODY '}'
-// # BODY = ITEM*
+// # BODY = ( ITEM | , )*
 // # ITEM = VAR ':' VAL | VAR VAL
 // # VAR = VAR_TOKEN
 // # VAL = VAL_TOKEN | PROTO | LIST | ENUM_VAL
@@ -114,6 +114,10 @@ protoviewer.parse_body = function(text, ii) {
             result.value[name.value] = [];
         }
         result.value[name.value].push(value.value);
+        if (text.charAt(ii) == ",") {
+            ii++;
+            ii = protoviewer.consume_comments(text, ii);
+        }
     }
     result.position = ii;
     return result;
