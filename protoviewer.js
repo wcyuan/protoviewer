@@ -55,7 +55,7 @@ protoviewer.consume_comments = function(text, ii) {
     return ii;
 };
 
-protoviewer.parse = function(text, ii) {
+protoviewer.parse_proto = function(text, ii) {
     if (!ii) {
         ii = 0;
     }
@@ -82,36 +82,38 @@ protoviewer.parse = function(text, ii) {
 
 protoviewer.parse_body = function(text, ii) {
     var result = {
-        "value": [],
+        "value": {},
         "position": ii,
         "error": null,
     };
     while (text.length > ii) {
-        var item = protoviewer.parse_item(text, ii);
-        ii = item.position;
-        result.value.push(item.value);
-        if (item.error) {
-            result.error = item.error);
+        ii = protoviewer.consume_comments(text, ii);
+        var name = protoviewer.parse_token(text, ii, /* include_brackets=*/true);
+        if (name.error) {
+            result.error = name.error;
             break;
         }
+        ii = protoviewer.consume_comments(text, ii);
+        if (text.charAt(ii) == ":") {
+            ii++;
+        }
+        ii = protoviewer.consume_comments(text, ii);
+        var value = protoviewer.parse_value(text, ii);
+        if (value.error) {
+            result.error = value.error;
+            break;
+        }
+        ii = protoviewer.consume_comments(text, ii);
+        if (!(name in result.value)) {
+            result.value[name] = [];
+        }
+        result.value[name].push(value);
     }
     result.position = ii;
     return result;
 };
 
-protoviewer.parse_item = function(text, ii) {
-    var result = {
-        "position": ii,
-        "value": {},
-        "error": null,
-    };
-    ii = protoviewer.consume_whitespace(text);
-    var name = protoviewer.parse_token(text, ii, /* include_brackets=*/true);
-
-};
-
 protoviewer.parse_token = function(text, ii, should_include_brackets) {
-    ii = protoviewer.consume_comments(text, ii);
     var result;
     if (text.charAt(ii) == '"' || text.charAt(ii) == "'") {
         result = protoviewer.parse_string(text, ii);
@@ -123,10 +125,21 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
         result = protoviewer.consume_regexp(regexp);
         result.error = null;
     }
-    result.position = protoviewer.consume_comments(text, result.position);
     if (!result.value) {
         result.error = "Error parsing item, no name found: " + ii;
     }
     return result;
 };
 
+protoviewer.parse_value = function(text, ii) {
+    if (text.charAt(ii) == "{") {
+        // proto
+        return protoviewer.parse_proto(text, ii);
+    } else if (text.charAt(ii) == "[") {
+        // list
+        return protoviewer.parse_list(text, ii);
+    } else {
+        // don't try to handle enums
+        return protoviewer.parse_token(text, ii);
+    }
+};
