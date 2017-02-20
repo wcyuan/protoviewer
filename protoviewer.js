@@ -144,6 +144,10 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
     return result;
 };
 
+protoviewer.parse_string = function(text, ii) {
+    // implement me
+}
+
 protoviewer.parse_value = function(text, ii) {
     if (!ii) {
         ii = 0;
@@ -159,3 +163,37 @@ protoviewer.parse_value = function(text, ii) {
         return protoviewer.parse_token(text, ii);
     }
 };
+
+protoviewer.parse_list = function(text, ii) {
+    if (!ii) {
+        ii = 0;
+    }
+    if (text.charAt(ii) == "[") {
+        ii++;
+        ii = protoviewer.consume_comments(text, ii);
+    }
+    var result = {
+        "value": [],
+        "position": ii,
+        "error": null,
+    };
+    while (text.length > ii && text.charAt(ii) != "]") {
+        var item = protoviewer.parse_value(text, ii);
+        if (item.error) {
+            result.position = item.position;
+            return result;
+        }
+        ii = item.position;
+        ii = protoviewer.consume_comments(text, ii);
+        result.value.push(item.value);
+    }
+    result.position = ii;
+    if (text.length > ii) {
+        // error
+    } else if (text.charAt(ii) == "]") {
+        ii++;
+        ii = protoviewer.consume_comments(text, ii);
+    }
+    return result;
+}
+
