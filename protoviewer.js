@@ -38,7 +38,7 @@ protoviewer.consume_regexp = function(text, ii, regexp) {
             text.charAt(jj).match(regexp);
             jj++) {
     }
-    return {'value': text.substr(ii, jj-ii), 'position': jj};
+    return {value: text.substr(ii, jj-ii), position: jj};
 };
 
 protoviewer.consume_whitespace = function(text, ii) {
@@ -85,12 +85,11 @@ protoviewer.parse_body = function(text, ii) {
         ii = 0;
     }
     var result = {
-        "value": {},
-        "position": ii,
-        "error": null,
+        value: {},
+        position: ii,
+        error: null,
     };
     while (text.length > ii) {
-        console.log("ii = " + ii);
         ii = protoviewer.consume_comments(text, ii);
         var name = protoviewer.parse_token(text, ii, /* include_brackets=*/true);
         if (name.error) {
@@ -145,7 +144,34 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
 };
 
 protoviewer.parse_string = function(text, ii) {
-    // implement me
+    if (!ii) {
+        ii = 0;
+    }
+    var quote = text.charAt(ii);
+    if (text.charAt(ii) != "'" && text.charAt(ii) != '"') {
+        return {value: "", position: ii, error: "Invalid string, doesn't start with quote: " + quote}; 
+    }
+    var result = {value: [], error: null, position: ii};
+    var jj = ii + 1;
+    for ( ; jj < text.length; jj++) {
+        if (text.charAt(jj) == quote) {
+            break;
+        }
+        if (text.charAt(jj) == "\\") {
+            jj++;
+        }
+        result.value.push(text.charAt(jj));
+    }
+    result.value = result.value.join("");
+    result.position = jj;
+    if (jj >= text.length) {
+        result.error = "No end of string found: " + ii;
+    } else if (text.charAt(jj) == quote) {
+        jj++;
+        jj = protoviewer.consume_comments(text, jj);
+        result.position = jj;
+    }
+    return result;
 }
 
 protoviewer.parse_value = function(text, ii) {
@@ -173,9 +199,9 @@ protoviewer.parse_list = function(text, ii) {
         ii = protoviewer.consume_comments(text, ii);
     }
     var result = {
-        "value": [],
-        "position": ii,
-        "error": null,
+        value: [],
+        position: ii,
+        error: null,
     };
     while (text.length > ii && text.charAt(ii) != "]") {
         var item = protoviewer.parse_value(text, ii);
