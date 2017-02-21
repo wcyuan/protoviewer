@@ -233,10 +233,10 @@ protoviewer.draw_proto = function(elt, proto, level) {
     for (var name in proto) {
         var li = protoviewer.add_child_element(list, "li");
         li.style.listStyle = "none";
-        var div = protoviewer.add_child_element(li, "div");
-        var icon = protoviewer.add_child_text(div, " - ");
-        protoviewer.add_child_text(div, name);
         for (var ii = 0; ii < proto[name].length; ii++ ) {
+            var div = protoviewer.add_child_element(li, "div");
+            var icon = protoviewer.add_child_text(div, " - ");
+            protoviewer.add_child_text(div, name);
             if (protoviewer.is_object(proto[name][ii])) {
                 if (typeof level === 'undefined' || level > 0) {
                     var new_level;
