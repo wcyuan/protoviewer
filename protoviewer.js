@@ -75,8 +75,8 @@ protoviewer.parse_proto = function(text, ii) {
         if (text.charAt(ii) != "}") {
             result.error = "Missing Closing Brace";
         } else {
-			ii++;
-		}
+            ii++;
+        }
         ii = protoviewer.consume_comments(text, ii);
         result.position = ii;
     }
@@ -141,7 +141,8 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
         result.error = null;
     }
     if (!result.value) {
-        result.error = "Error parsing token at: " + ii + " = " + text.charAt(ii);
+        result.error = "Error parsing token at: " + ii + " = " +
+            text.charAt(ii) + " (" + text.substr(ii - 10, 20) + ")";
     }
     return result;
 };
@@ -229,60 +230,62 @@ protoviewer.parse_list = function(text, ii) {
 // ------------------------------------------------------------------ //
 
 protoviewer.draw_proto = function(elt, proto, level) {
-	var list = protoviewer.add_child_element(elt, "ul");
-	for (var name in proto) {
-		var li = protoviewer.add_child_element(list, "li");
-		li.style.listStyle = "none";
-		var div = protoviewer.add_child_element(li, "div");
-		var icon = protoviewer.add_child_text(div, " - ");
-		protoviewer.add_child_text(div, name);
-		if (protoviewer.is_object(proto[name])) {
-			if (typeof level === 'undefined' || level > 0) {
-				var new_level;
-				if (typeof level !== 'undefined') {
-					new_level = level - 1;
-				}
-				protoviewer.draw_proto(li, proto[name], new_level);
-			}
-		} else {
-			protoviewer.add_child_text(div, proto[name]);
-		}
-	}
+    var list = protoviewer.add_child_element(elt, "ul");
+    for (var name in proto) {
+        var li = protoviewer.add_child_element(list, "li");
+        li.style.listStyle = "none";
+        var div = protoviewer.add_child_element(li, "div");
+        var icon = protoviewer.add_child_text(div, " - ");
+        protoviewer.add_child_text(div, name);
+        for (var ii = 0; ii < proto[name].length; ii++ ) {
+            if (protoviewer.is_object(proto[name][ii])) {
+                if (typeof level === 'undefined' || level > 0) {
+                    var new_level;
+                    if (typeof level !== 'undefined') {
+                        new_level = level - 1;
+                    }
+                    protoviewer.draw_proto(li, proto[name][ii], new_level);
+                }
+            } else {
+                protoviewer.add_child_text(div, ": " + proto[name][ii]);
+            }
+        }
+    }
 };
 
 protoviewer.is_object = function(obj) {
-	return (obj !== null && typeof obj === 'object');
+    return (obj !== null && typeof obj === 'object');
 };
 
 protoviewer.add_child_text = function(par, text) {
-	var elt = document.createTextNode(text);
-	par.appendChild(elt);
-	return elt;
+    var elt = document.createTextNode(text);
+    par.appendChild(elt);
+    return elt;
 };
 
 protoviewer.add_child_element = function(par, type) {
-	var elt = document.createElement(type);
-	par.appendChild(elt);
-	return elt;
+    var elt = document.createElement(type);
+    par.appendChild(elt);
+    return elt;
 };
 
 protoviewer.set_toggle_display = function(button_id, elt_id) {
-	var button = document.getElementById(button_id);
-	this.addEventListener(button, "click", function() {
-		protoviewer.toggle_display(elt_id);
-	});
-	return this;
+    var button = document.getElementById(button_id);
+    this.addEventListener(button, "click", function() {
+        protoviewer.toggle_display(elt_id);
+    });
+    return this;
 };
 
 protoviewer.toggle_display = function(elt_id) {
-	var elt = document.getElementById(elt_id);
-	var display = elt.style.display;
-	if (display == "none") {
-		elt.style.display = "inline";
-	} else {
-		elt.style.display = "none";
-	}
-	return elt;
+    var elt = document.getElementById(elt_id);
+    var display = elt.style.display;
+    if (display == "none") {
+        elt.style.display = "inline";
+    } else {
+        elt.style.display = "none";
+    }
+    return elt;
 };
 
 protoviewer.addEventListener = function(elt, type, func) {
@@ -297,9 +300,9 @@ protoviewer.addEventListener = function(elt, type, func) {
 };
 
 protoviewer.remove_children = function(node) {
-	while (node.firstChild) {
-		node.removeChild(node.firstChild);
-	}
+    while (node.firstChild) {
+        node.removeChild(node.firstChild);
+    }
 };
 
 protoviewer.main = function() {
@@ -307,10 +310,10 @@ protoviewer.main = function() {
     protoviewer.addEventListener(parse_button, "click", function() {
         var input = document.getElementById("input");
         proto = protoviewer.parse_proto(input.value);
-		console.log(proto);
+        console.log(proto);
         var output = document.getElementById("output");
-		protoviewer.remove_children(output);
-		protoviewer.draw_proto(output, proto.value);
+        protoviewer.remove_children(output);
+        protoviewer.draw_proto(output, proto.value);
     });
 };
 
