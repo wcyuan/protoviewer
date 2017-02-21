@@ -34,8 +34,7 @@ var protoviewer = {};
 
 protoviewer.consume_regexp = function(text, ii, regexp) {
     for (var jj = ii;
-            jj < text.length &&
-            text.charAt(jj).match(regexp);
+            jj < text.length && text.charAt(jj).match(regexp);
             jj++) {
     }
     return {value: text.substr(ii, jj-ii), position: jj};
@@ -112,7 +111,7 @@ protoviewer.parse_body = function(text, ii) {
         } 
         ii = value.position;
         ii = protoviewer.consume_comments(text, ii);
-        if (!(name in result.value)) {
+        if (!(name.value in result.value)) {
             result.value[name.value] = [];
         }
         result.value[name.value].push(value.value);
