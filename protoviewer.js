@@ -228,15 +228,18 @@ protoviewer.parse_list = function(text, ii) {
 
 // ------------------------------------------------------------------ //
 
-protoviewer.draw_proto = function(elt, proto, level) {
-    var list = protoviewer.add_child_element(elt, "ul");
+protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level) {
+    var list = elt;
+    if (!should_not_add_ul) {
+        list = protoviewer.add_child_element(elt, "ul");
+    }
     for (var name in proto) {
-        var li = protoviewer.add_child_element(list, "li");
-        li.style.listStyle = "none";
+        //li.style.listStyle = "none";
         for (var ii = 0; ii < proto[name].length; ii++ ) {
-            var div = protoviewer.add_child_element(li, "div");
-            var icon = protoviewer.add_child_text(div, " - ");
-            protoviewer.add_child_text(div, name);
+            var li = protoviewer.add_child_element(list, "li");
+            //var div = protoviewer.add_child_element(li, "div");
+            //var icon = protoviewer.add_child_text(div, " - ");
+            protoviewer.add_child_text(li, "" + name);
             if (protoviewer.is_object(proto[name][ii])) {
                 if (typeof level === 'undefined' || level > 0) {
                     var new_level;
@@ -246,7 +249,7 @@ protoviewer.draw_proto = function(elt, proto, level) {
                     protoviewer.draw_proto(li, proto[name][ii], new_level);
                 }
             } else {
-                protoviewer.add_child_text(div, ": " + proto[name][ii]);
+                protoviewer.add_child_text(li, ": " + proto[name][ii]);
             }
         }
     }
@@ -257,6 +260,8 @@ protoviewer.is_object = function(obj) {
 };
 
 protoviewer.add_child_text = function(par, text) {
+    par.innerHTML += text;
+    return par;
     var elt = document.createTextNode(text);
     par.appendChild(elt);
     return elt;
@@ -310,13 +315,16 @@ protoviewer.main = function() {
         var input = document.getElementById("input");
         proto = protoviewer.parse_proto(input.value);
         console.log(proto);
-        var output = document.getElementById("output");
+        var output = document.getElementById("tree");
         protoviewer.remove_children(output);
-        protoviewer.draw_proto(output, proto.value);
+        protoviewer.draw_proto(output, proto.value, true);
+        $(function(){
+            $("#tree").almightree({search: "#search"});
+        });
     });
 };
 
-protoviewer.main();
+//protoviewer.main();
 
 
 

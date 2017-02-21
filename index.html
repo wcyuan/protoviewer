@@ -1,20 +1,36 @@
 <!doctype html>
 <html>
+    <head>
+        <meta charset="utf-8">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="jquery.almightree.js"></script>
+        <script src="protoviewer.js"></script>
+        <link rel="stylesheet" href="almightree.css">
+    </head>
     <body>
         <form action="javascript:void(0);">
-        <textarea id="input" cols=130 rows=30>
+            <textarea id="input" cols=130 rows=30>
 a: 1
 b {
-	c : 4
-	d : 2
+c : 4
+d : 2
 }
-		</textarea>
-        <input id="parse" type="submit" value="parse">
-        <br>
-        <input id="search" type="text"></input><input id="search_button" type="button" value="search">
-        <div id="output">
-        </div>
+            </textarea>
+            <input id="parse" type="submit" value="parse">
+            <br>
+            <div id="output">
+              <input id="search" type="text"></input>
+              <input id="search_button" type="button" value="search">
+              <a href="#" id="clear">clear</a>
+              <ul id="tree">
+              </ul>
+            </div>
         </form>
-        <script src="protoviewer.js"></script>
+        <script>
+            protoviewer.main();
+            $(function(){
+                $("#tree").almightree({search: "#search"});
+            });
+        </script>
     </body>
 </html>
