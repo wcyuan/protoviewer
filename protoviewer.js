@@ -318,18 +318,13 @@ protoviewer.main = function() {
         var output = document.getElementById("tree");
         protoviewer.remove_children(output);
 
-        //protoviewer.draw_proto(output, proto.value, true);
+        protoviewer.draw_proto(output, proto.value, true);
 
-        //$(function(){
-        //    $("#tree").almightree({search: "#search"});
-        //});
+        $(function(){ $("#tree").almightree({search: "#search"}); });
 
-        // make the list with the ID 'tree' collapsible
-        //CollapsibleLists.applyTo(document.getElementById('tree'));
+        // CollapsibleLists.applyTo(document.getElementById('tree'));
 
-        JSONFormatter.format(proto.value, {
-            collapse: true,
-        });
+        // JSONFormatter.format(proto.value, { collapse: true, });
     });
 };
 
