@@ -95,6 +95,7 @@ protoviewer.parse_body = function(text, ii) {
         ii = protoviewer.consume_comments(text, ii);
         var name = protoviewer.parse_token(text, ii, /* include_brackets=*/true);
         if (name.error) {
+            // should this really be an error?  Or is this just the end of the proto?
             result.error = name.error;
             break;
         }
@@ -182,13 +183,11 @@ protoviewer.parse_value = function(text, ii) {
         ii = 0;
     }
     if (text.charAt(ii) == "{") {
-        // proto
         return protoviewer.parse_proto(text, ii);
     } else if (text.charAt(ii) == "[") {
-        // list
         return protoviewer.parse_list(text, ii);
     } else {
-        // don't try to handle enums
+        // we don't try to handle enums yet
         return protoviewer.parse_token(text, ii);
     }
 };
@@ -217,11 +216,12 @@ protoviewer.parse_list = function(text, ii) {
         result.value.push(item.value);
     }
     result.position = ii;
-    if (text.length > ii) {
-        // error
+    if (text.length <= ii) {
+        result.error = "No end of list found: ";
     } else if (text.charAt(ii) == "]") {
         ii++;
         ii = protoviewer.consume_comments(text, ii);
+        result.position = ii;
     }
     return result;
 };
