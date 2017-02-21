@@ -1,16 +1,20 @@
 <!doctype html>
 <html>
-    <head>
-        <script src="protoviewer.js"></script>
-    </head>
     <body>
         <form action="javascript:void(0);">
-        <textarea id="input" width=500></textarea>
+        <textarea id="input" width=500>
+			a: 1
+			b {
+				c : 4
+				d : 2
+			}
+		</textarea>
         <input id="parse" type="submit" value="parse">
         <br>
         <input id="search" type="text"></input><input id="search_button" type="button" value="search">
         <div id="output">
         </div>
         </form>
+        <script src="protoviewer.js"></script>
     </body>
 </html>
