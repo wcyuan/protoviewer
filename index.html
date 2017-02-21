@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
         <script src="jquery.almightree.js"></script>
+        <script src="CollapsibleLists.js"></script>
         <script src="protoviewer.js"></script>
         <link rel="stylesheet" href="almightree.css">
     </head>
@@ -22,15 +23,12 @@ d : 2
               <input id="search" type="text"></input>
               <input id="search_button" type="button" value="search">
               <a href="#" id="clear">clear</a>
-              <ul id="tree">
+              <ul id="tree" class="collapsibleList">
               </ul>
             </div>
         </form>
         <script>
             protoviewer.main();
-            $(function(){
-                $("#tree").almightree({search: "#search"});
-            });
         </script>
     </body>
 </html>
