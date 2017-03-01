@@ -282,7 +282,9 @@ protoviewer.parse_list = function(text, ii) {
 
 // the proto info object should be an object with the same structure
 // as the proto, but instead of holding values, it holds metadata, like
-// the depth or whether the proto should be expanded
+// the depth.
+// Currently, the only metadata is the depth, so we should probably just
+// name it that way.
 protoviewer.make_proto_info = function(proto) {
     var proto_info = {};
     for (var name in proto) {
