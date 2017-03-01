@@ -37,7 +37,12 @@ protoviewer.consume_regexp = function(text, ii, regexp) {
             jj < text.length && text.charAt(jj).match(regexp);
             jj++) {
     }
-    return {value: text.substr(ii, jj-ii), position: jj};
+    return {
+        value: text.substr(ii, jj-ii),
+        position: jj,
+        error: null,
+        depth: 0,
+    };
 };
 
 protoviewer.consume_whitespace = function(text, ii) {
@@ -90,6 +95,7 @@ protoviewer.parse_body = function(text, ii) {
         value: {},
         position: ii,
         error: null,
+        depth: 0,
     };
     while (text.length > ii && text.charAt(ii) != "}") {
         var old_ii = ii;
@@ -109,19 +115,21 @@ protoviewer.parse_body = function(text, ii) {
         }
         ii = protoviewer.consume_comments(text, ii);
         var value = protoviewer.parse_value(text, ii);
-        if (value.error) {
-            result.error = value.error;
-            if (value.position) {
-                ii = value.position;
-            }
-            break;
-        } 
-        ii = value.position;
+        if (value.position) {
+            ii = value.position;
+        }
         ii = protoviewer.consume_comments(text, ii);
         if (!(name.value in result.value)) {
             result.value[name.value] = [];
         }
         result.value[name.value].push(value.value);
+        if (value.depth + 1 > result.depth) {
+            result.depth = value.depth + 1;
+        }
+        if (value.error) {
+            result.error = value.error;
+            break;
+        }
         if (text.charAt(ii) == ",") {
             ii++;
             ii = protoviewer.consume_comments(text, ii);
@@ -136,12 +144,34 @@ protoviewer.parse_body = function(text, ii) {
     return result;
 };
 
+// the proto info object should be an object with the same structure
+// as the proto, but instead of holding values, it holds metadata, like
+// the depth or whether the proto should be expanded
+protoviewer.make_proto_info = function(proto) {
+    var proto_info = {};
+    for (var name in proto) {
+        proto_info[name] = [];
+        proto_info[name].depth = 0;
+        for (var ii = 0; ii < proto[name].length; ii++ ) {
+            if (protoviewer.is_object(proto[name][ii])) {
+                proto_info[name][ii] = protoviewer.make_proto_info(proto[name][ii]);
+                for (var subname in proto_info[name][ii]) {
+                    if (proto_info[name][ii][subname].depth + 1 > proto_info[name].depth) {
+                        proto_info[name].depth = proto_info[name][ii][subname].depth + 1;
+                    }
+                }
+            }
+        }
+    }
+    return proto_info;
+};
+
 protoviewer.make_error = function(message, text, ii, len) {
     if (!len) {
         len = 10;
     }
     return message + " at: " + ii + " = " +
-            text.charAt(ii) + " (" + text.substr(ii - len, len*2) + ")";
+        text.charAt(ii) + " (" + text.substr(ii - len, len*2) + ")";
 };
 
 protoviewer.parse_token = function(text, ii, should_include_brackets) {
@@ -171,9 +201,19 @@ protoviewer.parse_string = function(text, ii) {
     }
     var quote = text.charAt(ii);
     if (text.charAt(ii) != "'" && text.charAt(ii) != '"') {
-        return {value: "", position: ii, error: "Invalid string, doesn't start with quote: " + quote}; 
+        return {
+            value: "",
+            position: ii,
+            error: "Invalid string, doesn't start with quote: " + quote,
+            depth: 0,
+        }; 
     }
-    var result = {value: [], error: null, position: ii};
+    var result = {
+        value: [],
+        error: null,
+        position: ii,
+        depth: 0,
+    };
     var jj = ii + 1;
     for ( ; jj < text.length; jj++) {
         if (text.charAt(jj) == quote) {
@@ -246,10 +286,13 @@ protoviewer.parse_list = function(text, ii) {
 
 // ------------------------------------------------------------------ //
 
-protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level) {
+protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level, info) {
     var list = elt;
     if (!should_not_add_ul) {
         list = protoviewer.add_child_element(elt, "ul");
+    }
+    if (!info) {
+        info = protoviewer.make_proto_info(proto);
     }
     for (var name in proto) {
         //li.style.listStyle = "none";
@@ -257,15 +300,16 @@ protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level) {
             var li = protoviewer.add_child_element(list, "li");
             //var div = protoviewer.add_child_element(li, "div");
             //var icon = protoviewer.add_child_text(div, " - ");
-            protoviewer.add_child_text(li, "" + name);
+            protoviewer.add_child_text(li, "" + name + " (" +
+                    info[name].depth + ")");
             if (protoviewer.is_object(proto[name][ii])) {
                 if (!protoviewer.is_defined(level) || level > 0) {
                     var new_level;
                     if (protoviewer.is_defined(level)) {
                         new_level = level - 1;
                     }
-                    protoviewer.draw_proto(li, proto[name][ii], new_level);
                 }
+                protoviewer.draw_proto(li, proto[name][ii], new_level, info[name][ii]);
             } else {
                 protoviewer.add_child_text(li, ": " + proto[name][ii]);
             }
@@ -342,11 +386,11 @@ protoviewer.main = function() {
 
         protoviewer.draw_proto(output, proto.value, true);
 
-        $(function(){ $("#tree").almightree({search: "#search"}); });
+        // $(function(){ $("#tree").almightree({search: "#search"}); });
 
-        // CollapsibleLists.applyTo(document.getElementById('tree'));
+        CollapsibleLists.applyTo(document.getElementById('tree'));
 
-        // JSONFormatter.format(proto.value, { collapse: true, });
+        // JSONFormatter.format(JSON.parse(JSON.stringify(proto.value)), { collapse: true, });
     });
 };
 
