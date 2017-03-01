@@ -41,7 +41,6 @@ protoviewer.consume_regexp = function(text, ii, regexp) {
         value: text.substr(ii, jj-ii),
         position: jj,
         error: null,
-        depth: 0,
     };
 };
 
@@ -95,7 +94,6 @@ protoviewer.parse_body = function(text, ii) {
         value: {},
         position: ii,
         error: null,
-        depth: 0,
     };
     while (text.length > ii && text.charAt(ii) != "}") {
         var old_ii = ii;
@@ -123,9 +121,6 @@ protoviewer.parse_body = function(text, ii) {
             result.value[name.value] = [];
         }
         result.value[name.value].push(value.value);
-        if (value.depth + 1 > result.depth) {
-            result.depth = value.depth + 1;
-        }
         if (value.error) {
             result.error = value.error;
             break;
@@ -182,9 +177,9 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
     if (text.charAt(ii) == '"' || text.charAt(ii) == "'") {
         result = protoviewer.parse_string(text, ii);
     } else {
-        var regexp = /[\w\.-]/;
+        var regexp = /[\w\.\-\+]/;
         if (should_include_brackets) {
-            regexp = /[\w\.\[\]-]/;
+            regexp = /[\w\.\[\]\-\+]/;
         }
         result = protoviewer.consume_regexp(text, ii, regexp);
         result.error = null;
@@ -205,14 +200,12 @@ protoviewer.parse_string = function(text, ii) {
             value: "",
             position: ii,
             error: "Invalid string, doesn't start with quote: " + quote,
-            depth: 0,
         }; 
     }
     var result = {
         value: [],
         error: null,
         position: ii,
-        depth: 0,
     };
     var jj = ii + 1;
     for ( ; jj < text.length; jj++) {
