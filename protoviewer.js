@@ -92,6 +92,7 @@ protoviewer.parse_body = function(text, ii) {
         error: null,
     };
     while (text.length > ii && text.charAt(ii) != "}") {
+        var old_ii = ii;
         ii = protoviewer.consume_comments(text, ii);
         var name = protoviewer.parse_token(text, ii, /* include_brackets=*/true);
         if (name.error) {
@@ -99,6 +100,8 @@ protoviewer.parse_body = function(text, ii) {
             result.error = name.error;
             break;
         }
+        // for debugging:
+        // console.log(name.value);
         ii = name.position;
         ii = protoviewer.consume_comments(text, ii);
         if (text.charAt(ii) == ":") {
@@ -108,6 +111,9 @@ protoviewer.parse_body = function(text, ii) {
         var value = protoviewer.parse_value(text, ii);
         if (value.error) {
             result.error = value.error;
+            if (value.position) {
+                ii = value.position;
+            }
             break;
         } 
         ii = value.position;
@@ -120,9 +126,22 @@ protoviewer.parse_body = function(text, ii) {
             ii++;
             ii = protoviewer.consume_comments(text, ii);
         }
+        if (ii == old_ii) {
+            // This can happen if there is an unrecognized character
+            result.error = protoviewer.make_error("Internal error!  Infinite loop", text, ii);
+            break;
+        }
     }
     result.position = ii;
     return result;
+};
+
+protoviewer.make_error = function(message, text, ii, len) {
+    if (!len) {
+        len = 10;
+    }
+    return message + " at: " + ii + " = " +
+            text.charAt(ii) + " (" + text.substr(ii - len, len*2) + ")";
 };
 
 protoviewer.parse_token = function(text, ii, should_include_brackets) {
@@ -133,16 +152,15 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
     if (text.charAt(ii) == '"' || text.charAt(ii) == "'") {
         result = protoviewer.parse_string(text, ii);
     } else {
-        var regexp = /\w/;
+        var regexp = /[\w\.-]/;
         if (should_include_brackets) {
-            regexp = /[\w\[\]]/;
+            regexp = /[\w\.\[\]-]/;
         }
         result = protoviewer.consume_regexp(text, ii, regexp);
         result.error = null;
     }
-    if (!result.value) {
-        result.error = "Error parsing token at: " + ii + " = " +
-            text.charAt(ii) + " (" + text.substr(ii - 10, 20) + ")";
+    if (!protoviewer.is_defined(result.value)) {
+        result.error = protoviewer.make_error("Error parsing token", text, ii);
     }
     return result;
 };
@@ -241,9 +259,9 @@ protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level) {
             //var icon = protoviewer.add_child_text(div, " - ");
             protoviewer.add_child_text(li, "" + name);
             if (protoviewer.is_object(proto[name][ii])) {
-                if (typeof level === 'undefined' || level > 0) {
+                if (!protoviewer.is_defined(level) || level > 0) {
                     var new_level;
-                    if (typeof level !== 'undefined') {
+                    if (protoviewer.is_defined(level)) {
                         new_level = level - 1;
                     }
                     protoviewer.draw_proto(li, proto[name][ii], new_level);
@@ -253,6 +271,10 @@ protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level) {
             }
         }
     }
+};
+
+protoviewer.is_defined = function(obj) {
+    return typeof obj !== 'undefined';
 };
 
 protoviewer.is_object = function(obj) {
