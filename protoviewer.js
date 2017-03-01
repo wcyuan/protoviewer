@@ -30,7 +30,21 @@
 // outputs a ProtoList.  Every element of a ProtoList
 // is either a ProtoObject or a string.  A ProtoObject
 // maps from field name to ProtoList.
+//
+// To be clear, a ProtoList is just represented with a regular list.
+// A ProtoObject is just a regular object.  There are no special
+// types defined, it's just that when you get a proto, you can
+// assume that this is the structure they will have.
 var protoviewer = {};
+
+// a helper function for making error messages
+protoviewer.make_error = function(message, text, ii, len) {
+    if (!len) {
+        len = 10;
+    }
+    return message + " at: " + ii + " = " +
+        text.charAt(ii) + " (" + text.substr(ii - len, len*2) + ")";
+};
 
 protoviewer.consume_regexp = function(text, ii, regexp) {
     for (var jj = ii;
@@ -58,6 +72,25 @@ protoviewer.consume_comments = function(text, ii) {
     return ii;
 };
 
+// This is the top level function to call to parse a
+// in TextFormat.  The return value is an object
+// with these values:
+// {
+//     value:
+//         the proto
+//     position:
+//         the position in the text after
+//         reading this proto
+//     error:
+//         an error message, if there was a
+//         problem parsing the proto
+//         null if there were no problems
+// }
+// The proto value will be an object of
+// lists of objects of lists of objects ...
+//
+// This is also the return value of all the "parse_..." functions
+// in this file.
 protoviewer.parse_proto = function(text, ii) {
     if (!ii) {
         ii = 0;
@@ -137,36 +170,6 @@ protoviewer.parse_body = function(text, ii) {
     }
     result.position = ii;
     return result;
-};
-
-// the proto info object should be an object with the same structure
-// as the proto, but instead of holding values, it holds metadata, like
-// the depth or whether the proto should be expanded
-protoviewer.make_proto_info = function(proto) {
-    var proto_info = {};
-    for (var name in proto) {
-        proto_info[name] = [];
-        proto_info[name].depth = 0;
-        for (var ii = 0; ii < proto[name].length; ii++ ) {
-            if (protoviewer.is_object(proto[name][ii])) {
-                proto_info[name][ii] = protoviewer.make_proto_info(proto[name][ii]);
-                for (var subname in proto_info[name][ii]) {
-                    if (proto_info[name][ii][subname].depth + 1 > proto_info[name].depth) {
-                        proto_info[name].depth = proto_info[name][ii][subname].depth + 1;
-                    }
-                }
-            }
-        }
-    }
-    return proto_info;
-};
-
-protoviewer.make_error = function(message, text, ii, len) {
-    if (!len) {
-        len = 10;
-    }
-    return message + " at: " + ii + " = " +
-        text.charAt(ii) + " (" + text.substr(ii - len, len*2) + ")";
 };
 
 protoviewer.parse_token = function(text, ii, should_include_brackets) {
@@ -275,6 +278,28 @@ protoviewer.parse_list = function(text, ii) {
         result.position = ii;
     }
     return result;
+};
+
+// the proto info object should be an object with the same structure
+// as the proto, but instead of holding values, it holds metadata, like
+// the depth or whether the proto should be expanded
+protoviewer.make_proto_info = function(proto) {
+    var proto_info = {};
+    for (var name in proto) {
+        proto_info[name] = [];
+        proto_info[name].depth = 0;
+        for (var ii = 0; ii < proto[name].length; ii++ ) {
+            if (protoviewer.is_object(proto[name][ii])) {
+                proto_info[name][ii] = protoviewer.make_proto_info(proto[name][ii]);
+                for (var subname in proto_info[name][ii]) {
+                    if (proto_info[name][ii][subname].depth + 1 > proto_info[name].depth) {
+                        proto_info[name].depth = proto_info[name][ii][subname].depth + 1;
+                    }
+                }
+            }
+        }
+    }
+    return proto_info;
 };
 
 // ------------------------------------------------------------------ //
