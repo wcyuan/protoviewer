@@ -325,6 +325,7 @@ protoviewer.get_depth_info = function(proto) {
     }});
 };
 
+// unused
 protoviewer.get_expand_info = function(proto, pattern) {
     var match = function(str, pattern) {
         return str == pattern;
@@ -487,14 +488,8 @@ protoviewer.main = function() {
         console.log(protoviewer.GLOBAL_PROTO);
         var output = document.getElementById("tree");
         protoviewer.remove_children(output);
-
         protoviewer.draw_proto(output, protoviewer.GLOBAL_PROTO.value, true);
-
-        // $(function(){ $("#tree").almightree({search: "#search"}); });
-
         CollapsibleLists.applyTo(document.getElementById('tree'));
-
-        // JSONFormatter.format(JSON.parse(JSON.stringify(proto.value)), { collapse: true, });
     });
     var search_button = document.getElementById("search_button");
     protoviewer.add_event_listener(search_button, "click", function() {
@@ -504,8 +499,4 @@ protoviewer.main = function() {
         protoviewer.set_expansion_by_pattern(tree, pattern.value);
     });
 };
-
-//protoviewer.main();
-
-
 
