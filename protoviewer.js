@@ -285,23 +285,65 @@ protoviewer.parse_list = function(text, ii) {
 // the depth.
 // Currently, the only metadata is the depth, so we should probably just
 // name it that way.
-protoviewer.make_proto_info = function(proto) {
+protoviewer.make_proto_info = function(proto, attributes) {
     var proto_info = {};
     for (var name in proto) {
         proto_info[name] = [];
-        proto_info[name].depth = 0;
         for (var ii = 0; ii < proto[name].length; ii++ ) {
             if (protoviewer.is_object(proto[name][ii])) {
-                proto_info[name][ii] = protoviewer.make_proto_info(proto[name][ii]);
-                for (var subname in proto_info[name][ii]) {
-                    if (proto_info[name][ii][subname].depth + 1 > proto_info[name].depth) {
-                        proto_info[name].depth = proto_info[name][ii][subname].depth + 1;
-                    }
+                proto_info[name][ii] = protoviewer.make_proto_info(proto[name][ii], attributes);
+            } else {
+                proto_info[name][ii] = {};
+                for (attr in attributes) {
+                    proto_info[name][ii][attr] = attributes[attr].leaf_function(name, ii, proto[name][ii]);
                 }
             }
         }
+        for (attr in attributes) {
+            proto_info[name][attr] = attributes[attr].aggregator(name, proto_info[name]);
+        }
     }
     return proto_info;
+};
+
+protoviewer.get_depth_info = function(proto) {
+    return protoviewer.make_proto_info(proto, {depth: {
+        leaf_function: function(name, ii, value) {
+            return 0;
+        },
+        aggregator: function(name, infos) {
+            var depth = 0;
+            for (var ii = 0; ii < infos.length; ii++) {
+                for (var subname in infos[ii]) {
+                    if (infos[ii][subname].depth + 1 > depth) {
+                        depth = infos[ii][subname].depth + 1;
+                    }
+                }
+            }
+            return depth;
+        },
+    }});
+};
+
+protoviewer.get_expand_info = function(proto, pattern) {
+    var match = function(str, pattern) {
+        return str == pattern;
+    };
+    return protoviewer.make_proto_info(proto, {depth: {
+        leaf_function: function(name, ii, value) {
+            return match(name, pattern) || match(value, pattern);
+        },
+        aggregator: function(name, infos) {
+            for (var ii = 0; ii < infos.length; ii++) {
+                for (var subname in infos[ii]) {
+                    if (infos[ii][subname].expand) {
+                        return true;
+                    }
+                }
+            }
+            return match(name, pattern);
+        },
+    }});
 };
 
 // ------------------------------------------------------------------ //
@@ -312,7 +354,7 @@ protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level, info) {
         list = protoviewer.add_child_element(elt, "ul");
     }
     if (!info) {
-        info = protoviewer.make_proto_info(proto);
+        info = protoviewer.get_depth_info(proto);
     }
     for (var name in proto) {
         //li.style.listStyle = "none";
@@ -361,7 +403,7 @@ protoviewer.add_child_element = function(par, type) {
 
 protoviewer.set_toggle_display = function(button_id, elt_id) {
     var button = document.getElementById(button_id);
-    this.addEventListener(button, "click", function() {
+    this.add_event_listener(button, "click", function() {
         protoviewer.toggle_display(elt_id);
     });
     return this;
@@ -378,7 +420,7 @@ protoviewer.toggle_display = function(elt_id) {
     return elt;
 };
 
-protoviewer.addEventListener = function(elt, type, func) {
+protoviewer.add_event_listener = function(elt, type, func) {
     if (elt.addEventListener) {
         elt.addEventListener(type, func, false);
         return true;
@@ -395,22 +437,71 @@ protoviewer.remove_children = function(node) {
     }
 };
 
+protoviewer.matches_pattern = function(string, pattern) {
+    return string.includes(pattern);
+};
+
+protoviewer.set_node_state = function(node, should_close) {
+    if ((CollapsibleLists.isClosed(node) && !should_close) ||
+            (!CollapsibleLists.isClosed(node) && should_close)) {
+        CollapsibleLists.toggle(node);
+    }
+};
+
+protoviewer.set_expansion_by_pattern = function(ul, pattern) {
+    var ul_has_match = false;
+    for (var ii = 0; ii < ul.childNodes.length; ii++) {
+        var child = ul.childNodes[ii];
+        if (child.nodeName != "LI") {
+            continue;
+        }
+        var li_has_match = false;
+        for (var jj = 0; jj < child.childNodes.length; jj++) {
+            var grandchild = child.childNodes[jj];
+            if (grandchild.nodeName == "#text") {
+                if (protoviewer.matches_pattern(grandchild.nodeValue, pattern)) {
+                    li_has_match = true;
+                }
+            } else if (grandchild.nodeName == "UL") {
+                var is_match = protoviewer.set_expansion_by_pattern(grandchild, pattern);
+                if (is_match) {
+                    li_has_match = true;
+                }
+            }
+        }
+        protoviewer.set_node_state(child, !li_has_match);
+        if (li_has_match) {
+            ul_has_match = true;
+        }
+    }
+    protoviewer.set_node_state(ul, !ul_has_match);
+    return ul_has_match;
+};
+
 protoviewer.main = function() {
+    protoviewer.GLOBAL_PROTO = null;
     var parse_button = document.getElementById("parse");
-    protoviewer.addEventListener(parse_button, "click", function() {
+    protoviewer.add_event_listener(parse_button, "click", function() {
         var input = document.getElementById("input");
-        proto = protoviewer.parse_proto(input.value);
-        console.log(proto);
+        protoviewer.GLOBAL_PROTO = protoviewer.parse_proto(input.value);
+        console.log(protoviewer.GLOBAL_PROTO);
         var output = document.getElementById("tree");
         protoviewer.remove_children(output);
 
-        protoviewer.draw_proto(output, proto.value, true);
+        protoviewer.draw_proto(output, protoviewer.GLOBAL_PROTO.value, true);
 
         // $(function(){ $("#tree").almightree({search: "#search"}); });
 
         CollapsibleLists.applyTo(document.getElementById('tree'));
 
         // JSONFormatter.format(JSON.parse(JSON.stringify(proto.value)), { collapse: true, });
+    });
+    var search_button = document.getElementById("search_button");
+    protoviewer.add_event_listener(search_button, "click", function() {
+        var pattern = document.getElementById("search");
+        //var expand = protoviewer.get_expand_info(protoviewer.GLOBAL_PROTO, pattern);
+        var tree = document.getElementById("tree");
+        protoviewer.set_expansion_by_pattern(tree, pattern.value);
     });
 };
 

@@ -149,4 +149,12 @@ var CollapsibleLists =
 
       }
 
+      this.toggle = toggle;
+      this.isClosed = function(node){
+        return node.className.match(/(^| )collapsibleListClosed( |$)/);
+      };
+      this.isCollapsible = function(node){
+        return node.className.match(/(^| )collapsibleList(Open|Closed)( |$)/);
+      };
+
     }();
