@@ -1,5 +1,12 @@
 /*
 
+Taken from:
+http://code.stephenmorley.org/javascript/collapsible-lists/
+
+Slightly modified for protoviewer
+
+--
+
 CollapsibleLists.js
 
 An object allowing lists to dynamically expand and collapse
@@ -149,6 +156,7 @@ var CollapsibleLists =
 
       }
 
+      // ------  BEGIN: This part was added for protoviewer ------ //
       this.toggle = toggle;
       this.isClosed = function(node){
         return node.className.match(/(^| )collapsibleListClosed( |$)/);
@@ -156,5 +164,7 @@ var CollapsibleLists =
       this.isCollapsible = function(node){
         return node.className.match(/(^| )collapsibleList(Open|Closed)( |$)/);
       };
+      // ------  END: This part was added for protoviewer ------ //
 
     }();
+
