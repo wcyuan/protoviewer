@@ -438,8 +438,12 @@ protoviewer.remove_children = function(node) {
     }
 };
 
-protoviewer.matches_pattern = function(string, pattern) {
-    return string.includes(pattern);
+protoviewer.matches_pattern = function(string, pattern, case_sensitive) {
+    if (case_sensitive) {
+        return string.includes(pattern);
+    } else {
+        return string.toLowerCase().includes(pattern.toLowerCase());
+    }
 };
 
 protoviewer.set_node_state = function(node, should_close) {
