@@ -353,8 +353,25 @@ protoviewer.draw_proto = function(
         elt, proto, should_not_add_ul, 
         add_collapse_expand, info) {
     var list = elt;
+    var collapse, expand;
+    if (add_collapse_expand) {
+        collapse = protoviewer.add_child_element(elt, "input");
+        expand = protoviewer.add_child_element(elt, "input");
+    }
     if (!should_not_add_ul) {
         list = protoviewer.add_child_element(elt, "ul");
+    }
+    if (add_collapse_expand) {
+        collapse.setAttribute("type", "button");
+        collapse.setAttribute("value", "-");
+        protoviewer.add_event_listener(collapse, "click", function() {
+            protoviewer.set_expansion(list, function() { return false; });
+        });
+        expand.setAttribute("type", "button");
+        expand.setAttribute("value", "+");
+        protoviewer.add_event_listener(expand, "click", function() {
+            protoviewer.set_expansion(list, function() { return true; });
+        });
     }
     if (!info) {
         info = protoviewer.get_depth_info(proto);
@@ -493,7 +510,7 @@ protoviewer.main = function() {
         console.log(protoviewer.GLOBAL_PROTO);
         var output = document.getElementById("tree");
         protoviewer.remove_children(output);
-        protoviewer.draw_proto(output, protoviewer.GLOBAL_PROTO.value, true);
+        protoviewer.draw_proto(output, protoviewer.GLOBAL_PROTO.value, true, true);
         CollapsibleLists.applyTo(document.getElementById('tree'));
     });
     var search_button = document.getElementById("search_button");
