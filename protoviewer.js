@@ -449,6 +449,12 @@ protoviewer.set_node_state = function(node, should_close) {
 };
 
 protoviewer.set_expansion_by_pattern = function(ul, pattern) {
+    return protoviewer.set_expansion(ul, function(node) {
+        return protoviewer.matches_pattern(node.nodeValue, pattern);
+    });
+};
+
+protoviewer.set_expansion = function(ul, predicate) {
     var ul_has_match = false;
     for (var ii = 0; ii < ul.childNodes.length; ii++) {
         var child = ul.childNodes[ii];
@@ -459,11 +465,11 @@ protoviewer.set_expansion_by_pattern = function(ul, pattern) {
         for (var jj = 0; jj < child.childNodes.length; jj++) {
             var grandchild = child.childNodes[jj];
             if (grandchild.nodeName == "#text") {
-                if (protoviewer.matches_pattern(grandchild.nodeValue, pattern)) {
+                if (predicate(grandchild)) {
                     li_has_match = true;
                 }
             } else if (grandchild.nodeName == "UL") {
-                var is_match = protoviewer.set_expansion_by_pattern(grandchild, pattern);
+                var is_match = protoviewer.set_expansion(grandchild, predicate);
                 if (is_match) {
                     li_has_match = true;
                 }
