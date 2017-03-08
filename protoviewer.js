@@ -64,11 +64,11 @@ protoviewer.consume_whitespace = function(text, ii) {
 
 protoviewer.consume_comments = function(text, ii) {
     ii = protoviewer.consume_whitespace(text, ii);
-    if (text.charAt(ii) == "#") {
+    while (ii < text.length && text.charAt(ii) == "#") {
         while(text.charAt(ii++) != "\n") {
         }
+        ii = protoviewer.consume_whitespace(text, ii);
     }
-    ii = protoviewer.consume_whitespace(text, ii);
     return ii;
 };
 
