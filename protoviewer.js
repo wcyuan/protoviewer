@@ -349,7 +349,9 @@ protoviewer.get_expand_info = function(proto, pattern) {
 
 // ------------------------------------------------------------------ //
 
-protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level, info) {
+protoviewer.draw_proto = function(
+        elt, proto, should_not_add_ul, 
+        add_collapse_expand, info) {
     var list = elt;
     if (!should_not_add_ul) {
         list = protoviewer.add_child_element(elt, "ul");
@@ -358,21 +360,14 @@ protoviewer.draw_proto = function(elt, proto, should_not_add_ul, level, info) {
         info = protoviewer.get_depth_info(proto);
     }
     for (var name in proto) {
-        //li.style.listStyle = "none";
         for (var ii = 0; ii < proto[name].length; ii++ ) {
             var li = protoviewer.add_child_element(list, "li");
-            //var div = protoviewer.add_child_element(li, "div");
-            //var icon = protoviewer.add_child_text(div, " - ");
             protoviewer.add_child_text(li, "" + name + " (" +
                     info[name].depth + ")");
             if (protoviewer.is_object(proto[name][ii])) {
-                if (!protoviewer.is_defined(level) || level > 0) {
-                    var new_level;
-                    if (protoviewer.is_defined(level)) {
-                        new_level = level - 1;
-                    }
-                }
-                protoviewer.draw_proto(li, proto[name][ii], new_level, info[name][ii]);
+                protoviewer.draw_proto(
+                        li, proto[name][ii], false,
+                        add_collapse_expand, info[name][ii]);
             } else {
                 protoviewer.add_child_text(li, ": " + proto[name][ii]);
             }
