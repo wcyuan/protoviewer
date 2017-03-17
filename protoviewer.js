@@ -280,28 +280,67 @@ protoviewer.parse_list = function(text, ii) {
     return result;
 };
 
-// the proto info object should be an object with the same structure
+// the proto info object is sort of like an object with the same structure
 // as the proto, but instead of holding values, it holds metadata, like
 // the depth.
-// Currently, the only metadata is the depth, so we should probably just
-// name it that way.
+//
+// However, normal protos essentially only have values at the leaves, not
+// at the edges.  But proto info objects have values at every node.  In
+// order to accomodate that much more data, they need to have a sort of
+// convoluted structure where the data of the tree sits in a separate
+// place from the structure (edges) of the tree:
+//
+// AttrProtoDict = values: { names to AttrProtoLists }
+//                   data: { names to attrs to values = total for each protolist }
+//                  total: { attrs to values = aggregate over data }
+//
+// AttrProtoList = values: [ {attrs to values} or AttrProtoDict ]
+//                   data: { attrs to [values = either the leaf value or the AttrProtoDict total ] }
+//                  total: { attrs to values = aggregate over data }
+//
+// The proto argument is the proto to compute metadata over.
+// The attributes argument tells you what meta data to compute.
+// It is a map from the name of the attribute to compute
+// to a map with two functions (so each attribute has two functions):
+//   - leaf_function: computes the value of the attribute for a leaf
+//     node of the proto, given the name, value, and index in the ProtoList.
+//   - aggregator: computes a new value for the attribute, given a list
+//     of the values for the sub proto.  This is called to aggregate
+//     the values over ProtoLists and again to aggregate values over
+//     ProtoDicts
+//
+// Currently, the only metadata we use this to compute is the depth
 protoviewer.make_proto_info = function(proto, attributes) {
-    var proto_info = {};
+    var proto_info = {values: {}, data: {}, total: {}};
     for (var name in proto) {
-        proto_info[name] = [];
+        proto_info.values[name] = {values: [], data: {}, total: {}};
+        for (attr in attributes) {
+            proto_info.values[name].data[attr] = [];
+        }
         for (var ii = 0; ii < proto[name].length; ii++ ) {
             if (protoviewer.is_object(proto[name][ii])) {
-                proto_info[name][ii] = protoviewer.make_proto_info(proto[name][ii], attributes);
-            } else {
-                proto_info[name][ii] = {};
+                proto_info.values[name].values[ii] = protoviewer.make_proto_info(proto[name][ii], attributes);
                 for (attr in attributes) {
-                    proto_info[name][ii][attr] = attributes[attr].leaf_function(name, ii, proto[name][ii]);
+                    proto_info.values[name].data[attr].push(proto_info.values[name].values[ii].total[attr]);
+                }
+            } else {
+                proto_info.values[name].values[ii] = {};
+                for (attr in attributes) {
+                    proto_info.values[name].values[ii][attr] = attributes[attr].leaf_function(name, ii, proto[name][ii]);
+                    proto_info.values[name].data[attr].push(proto_info.values[name].values[ii][attr]);
                 }
             }
         }
         for (attr in attributes) {
-            proto_info[name][attr] = attributes[attr].aggregator(name, proto_info[name]);
+            proto_info.values[name].total[attr] = attributes[attr].aggregator("list", proto_info.values[name].data[attr]); 
+            if (!(attr in proto_info.data)) {
+                proto_info.data[attr] = [];
+            }
+            proto_info.data[attr].push(proto_info.values[name].total[attr]);
         }
+    }
+    for (attr in attributes) {
+        proto_info.total[attr] = attributes[attr].aggregator("map", proto_info.data[attr]);
     }
     return proto_info;
 };
@@ -314,10 +353,12 @@ protoviewer.get_depth_info = function(proto) {
         aggregator: function(name, infos) {
             var depth = 0;
             for (var ii = 0; ii < infos.length; ii++) {
-                for (var subname in infos[ii]) {
-                    if (infos[ii][subname].depth + 1 > depth) {
-                        depth = infos[ii][subname].depth + 1;
-                    }
+                var val = infos[ii];
+                if (name == "map") {
+                    val += 1;
+                }
+                if (val > depth) {
+                    depth = val;
                 }
             }
             return depth;
@@ -325,21 +366,20 @@ protoviewer.get_depth_info = function(proto) {
     }});
 };
 
-// unused
+// unused.  it's supposed to determine which nodes to expand
+// in order to show all nodes or leaves that match the pattern
 protoviewer.get_expand_info = function(proto, pattern) {
     var match = function(str, pattern) {
         return str == pattern;
     };
-    return protoviewer.make_proto_info(proto, {depth: {
+    return protoviewer.make_proto_info(proto, {expand: {
         leaf_function: function(name, ii, value) {
             return match(name, pattern) || match(value, pattern);
         },
         aggregator: function(name, infos) {
             for (var ii = 0; ii < infos.length; ii++) {
-                for (var subname in infos[ii]) {
-                    if (infos[ii][subname].expand) {
-                        return true;
-                    }
+                if (infos[ii]) {
+                    return true;
                 }
             }
             return match(name, pattern);
@@ -380,11 +420,11 @@ protoviewer.draw_proto = function(
         for (var ii = 0; ii < proto[name].length; ii++ ) {
             var li = protoviewer.add_child_element(list, "li");
             protoviewer.add_child_text(li, "" + name + " (" +
-                    info[name].depth + ")");
+                    info.values[name].data.depth[ii] + ")");
             if (protoviewer.is_object(proto[name][ii])) {
                 protoviewer.draw_proto(
                         li, proto[name][ii], false,
-                        add_collapse_expand, info[name][ii]);
+                        add_collapse_expand, info.values[name].values[ii]);
             } else {
                 protoviewer.add_child_text(li, ": " + proto[name][ii]);
             }
