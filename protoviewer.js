@@ -65,7 +65,7 @@ protoviewer.consume_whitespace = function(text, ii) {
 protoviewer.consume_comments = function(text, ii) {
     ii = protoviewer.consume_whitespace(text, ii);
     while (ii < text.length && text.charAt(ii) == "#") {
-        while(text.charAt(ii++) != "\n") {
+        while(ii < text.length && text.charAt(ii++) != "\n") {
         }
         ii = protoviewer.consume_whitespace(text, ii);
     }
@@ -260,6 +260,7 @@ protoviewer.parse_list = function(text, ii) {
         error: null,
     };
     while (text.length > ii && text.charAt(ii) != "]") {
+        var old_ii = ii;
         var item = protoviewer.parse_value(text, ii);
         if (item.error) {
             result.position = item.position;
@@ -268,6 +269,14 @@ protoviewer.parse_list = function(text, ii) {
         ii = item.position;
         ii = protoviewer.consume_comments(text, ii);
         result.value.push(item.value);
+        if (text.length > ii && text.charAt(ii) == ",") {
+            ii++;
+            ii = protoviewer.consume_comments(text, ii);
+        }
+        if (old_ii == ii) {
+            result.error = protoviewer.make_error("Error parsing list, unrecognized character", text, ii);
+            break;
+        }
     }
     result.position = ii;
     if (text.length <= ii) {
