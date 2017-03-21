@@ -426,17 +426,22 @@ protoviewer.draw_proto = function(
         info = protoviewer.get_depth_info(proto);
     }
     for (var name in proto) {
-        for (var ii = 0; ii < proto[name].length; ii++ ) {
-            var li = protoviewer.add_child_element(list, "li");
-            protoviewer.add_child_text(li, "" + name + " (" +
-                    info.values[name].data.depth[ii] + ")");
-            if (protoviewer.is_object(proto[name][ii])) {
-                protoviewer.draw_proto(
-                        li, proto[name][ii], false,
-                        add_collapse_expand, info.values[name].values[ii]);
-            } else {
-                protoviewer.add_child_text(li, ": " + proto[name][ii]);
+        if (protoviewer.is_array(proto[name])) {
+            for (var ii = 0; ii < proto[name].length; ii++ ) {
+                var li = protoviewer.add_child_element(list, "li");
+                protoviewer.add_child_text(li, "" + name + " (" +
+                        info.values[name].data.depth[ii] + ")");
+                if (protoviewer.is_object(proto[name][ii])) {
+                    protoviewer.draw_proto(
+                            li, proto[name][ii], false,
+                            add_collapse_expand, info.values[name].values[ii]);
+                } else {
+                    protoviewer.add_child_text(li, ": " + proto[name][ii]);
+                }
             }
+        } else {
+            var li = protoviewer.add_child_element(list, "li");
+            protoviewer.add_child_text(li, proto[name]);
         }
     }
 };
@@ -445,8 +450,13 @@ protoviewer.is_defined = function(obj) {
     return typeof obj !== 'undefined';
 };
 
+// This is true for Arrays as well.
 protoviewer.is_object = function(obj) {
     return (obj !== null && typeof obj === 'object');
+};
+
+protoviewer.is_array = function(obj) {
+    return Array.isArray(obj);
 };
 
 protoviewer.add_child_text = function(par, text) {
