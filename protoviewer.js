@@ -459,6 +459,10 @@ protoviewer.is_array = function(obj) {
     return Array.isArray(obj);
 };
 
+protoviewer.is_string = function(obj) {
+    return (typeof obj === 'string' || obj instanceof String);
+};
+
 protoviewer.add_child_text = function(par, text) {
     par.innerHTML += text;
     return par;
@@ -560,6 +564,136 @@ protoviewer.set_expansion = function(ul, predicate) {
     return ul_has_match;
 };
 
+// Print out a proto in roughly the TextFormat style.
+// Assume that every string that parses as a Number is
+// a number.
+protoviewer.format = function(proto, flat, indent) {
+    var str = "";
+    if (!protoviewer.is_defined(indent)) {
+        indent = "";
+    }
+    for (var key in proto) {
+        for (var ii = 0; ii < proto[key].length; ii++) {
+            if (!flat) {
+                str += indent;
+            }
+            str += key;
+            if (protoviewer.is_array(proto[key][ii])) {
+                str += "[";
+                for (var jj = 0; jj < proto[key][ii].length; jj++) {
+                    str += proto[key][ii][jj];
+                    if (jj < proto[key][ii].length - 1) {
+                        str += ", ";
+                    }
+                }
+                str += "]";
+            } else if (protoviewer.is_object(proto[key][ii])) {
+                str += " {";
+                if (!flat) {
+                    str += "\n";
+                }
+                str += protoviewer.format(proto[key][ii], flat, indent + "  ");
+                if (!flat) {
+                    str += indent;
+                }
+                str += "}";
+            } else {
+                str += ": ";
+                var num = Number(proto[key][ii]);
+                if (isNaN(num)) {
+                    str += '"';
+                }
+                str += proto[key][ii];
+                if (isNaN(num)) {
+                    str += '"';
+                }
+            }
+            if (ii < proto[key].length - 1) {
+                if (!flat) {
+                    str += "\n";
+                }
+            }
+        }
+        if (!flat) {
+            str += "\n";
+        }
+    }
+    return str;
+};
+
+// convert
+// 
+// This function makes a copy of a proto, but changes some of
+// the field names along the way.  The field names to change
+// are defined by the paths variable.  Paths should be a dict
+// where the keys are the top level fields whose names should
+// be changed.  The value is an array.  The first element
+// of the array is the new name of the field.  The second
+// element is the "paths" array for the sub-object of the
+// proto following that key.
+//
+// If the new name of a field is null, that means that we remove
+// that level of the proto entirely and move all subfields of
+// that proto one level up.
+//
+// If you have a proto {"a": [{"b": ["1"]}{"c": ["2"]}]} and
+// you convert it with path {"a": ["x", {"b": ["y", {}]}]}, you'll
+// end up with {"x": [{"y": ["1"]}{"c": ["2"]}]} 
+protoviewer.convert = function(proto, paths) {
+    var retval = {};
+    for (var key in proto) {
+        if (key in paths) {
+            if (paths[key][0] !== null) {
+                retval[paths[key][0]] = protoviewer.convert_list(proto[key], paths[key][1]);
+            } else {
+                // If the first element of the path is null, that means
+                // drop this level of the proto tree
+                var newlist = protoviewer.convert_list(proto[key], paths[key][1]);
+                for (var ii = 0; ii < newlist.length; ii++) {
+                    if (protoviewer.is_object(newlist[ii])) {
+                        // non objects just get dropped
+                        for (subkey in newlist[ii]) {
+                            retval[subkey] = newlist[ii][subkey];
+                        }
+                    }
+                }
+            }
+        } else {
+            retval[key] = proto[key];
+        }
+    }
+    return retval;
+};
+
+// Just a helper for convert
+protoviewer.convert_list = function(list, paths) {
+    var retval = [];
+    for (var ii = 0; ii < list.length; ii++) {
+        if (protoviewer.is_object(list[ii])) {
+            retval.push(protoviewer.convert(list[ii], paths));
+        } else {
+            retval.push(list[ii]);
+        }
+    }
+    return retval;
+};
+
+// protoviewer.format(protoviewer.do_convert(protoviewer.GLOBAL_PROTO.value))
+
+protoviewer.do_convert = function(proto) {
+    return protoviewer.convert(proto, {
+        'intent': ['context', {
+            'user_feature': ['feature', {
+                'feature_name': ["name", {}],
+                'feature_weight': ["value", {}],
+            }],
+            '[config]': [null, {
+                'user_field': ["field", {}],
+            }],
+        }],
+    });
+};
+
 protoviewer.main = function() {
     protoviewer.GLOBAL_PROTO = null;
     var parse_button = document.getElementById("parse");
@@ -580,4 +714,3 @@ protoviewer.main = function() {
         protoviewer.set_expansion_by_pattern(tree, pattern.value);
     });
 };
-
