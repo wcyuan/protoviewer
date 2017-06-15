@@ -579,16 +579,16 @@ protoviewer.format = function(proto, flat, indent) {
             }
             str += key;
             if (protoviewer.is_array(proto[key][ii])) {
-                str += "[";
+                str += ": [ ";
                 for (var jj = 0; jj < proto[key][ii].length; jj++) {
                     str += proto[key][ii][jj];
                     if (jj < proto[key][ii].length - 1) {
                         str += ", ";
                     }
                 }
-                str += "]";
+                str += " ]";
             } else if (protoviewer.is_object(proto[key][ii])) {
-                str += " {";
+                str += " { ";
                 if (!flat) {
                     str += "\n";
                 }
@@ -596,7 +596,7 @@ protoviewer.format = function(proto, flat, indent) {
                 if (!flat) {
                     str += indent;
                 }
-                str += "}";
+                str += " }";
             } else {
                 str += ": ";
                 var num = Number(proto[key][ii]);
@@ -611,11 +611,15 @@ protoviewer.format = function(proto, flat, indent) {
             if (ii < proto[key].length - 1) {
                 if (!flat) {
                     str += "\n";
+                } else {
+                    str += " ";
                 }
             }
         }
         if (!flat) {
             str += "\n";
+        } else {
+            str += " ";
         }
     }
     return str;
@@ -678,7 +682,7 @@ protoviewer.convert_list = function(list, paths) {
     return retval;
 };
 
-// protoviewer.format(protoviewer.do_convert(protoviewer.GLOBAL_PROTO.value))
+// protoviewer.format(protoviewer.do_convert(protoviewer.GLOBAL_PROTO.value), true)
 
 protoviewer.do_convert = function(proto) {
     return protoviewer.convert(proto, {
