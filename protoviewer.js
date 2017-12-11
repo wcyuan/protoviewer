@@ -180,9 +180,9 @@ protoviewer.parse_token = function(text, ii, should_include_brackets) {
     if (text.charAt(ii) == '"' || text.charAt(ii) == "'") {
         result = protoviewer.parse_string(text, ii);
     } else {
-        var regexp = /[\w\.\-\+]/;
+        var regexp = /[\w\.\-\+\/]/;
         if (should_include_brackets) {
-            regexp = /[\w\.\[\]\-\+]/;
+            regexp = /[\w\.\[\]\-\+\/]/;
         }
         result = protoviewer.consume_regexp(text, ii, regexp);
         result.error = null;
