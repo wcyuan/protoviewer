@@ -8,14 +8,13 @@
     <body>
         <form action="javascript:void(0);">
             <textarea id="input" cols=130 rows=30>
-a: 1
+# Replace this with a TextFormat proto, then hit parse
+a: "\asdf\asdf\"asdf"
 b {
   c : 4
   d : 2
-  e : ["test", "lists"]
-  [f/g/hi] {
-    jk : "lmnop"
-  }
+  e : ["val1", "val2"]
+  f : XYZ
 }
             </textarea>
             <input id="parse" type="submit" value="parse">
@@ -23,9 +22,12 @@ b {
             <div id="output">
                 <input id="search" type="text"></input>
                 <input id="search_button" type="button" value="search">
+                <input id="filter" type="text">Filter</input>
                 <ul id="tree" class="collapsibleList">
                 </ul>
             </div>
+            <textarea id="parsed" cols=130 rows=30>
+            </textarea>
         </form>
         <script>
 protoviewer.main();
