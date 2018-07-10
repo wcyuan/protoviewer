@@ -91,7 +91,7 @@ protoviewer.consume_comments = function(text, ii) {
 //
 // This is also the return value of all the "parse_..." functions
 // in this file.
-protoviewer.parse_proto = function(text, ii) {
+protoviewer.parse_proto = function(text, ii, filter_func) {
     if (!ii) {
         ii = 0;
     }
@@ -101,7 +101,7 @@ protoviewer.parse_proto = function(text, ii) {
         has_braces = true;
         ii++;
     }
-    var result = protoviewer.parse_body(text, ii);
+    var result = protoviewer.parse_body(text, ii, filter_func);
     if (result.error) {
         return result;
     }
@@ -119,7 +119,7 @@ protoviewer.parse_proto = function(text, ii) {
     return result;
 };
 
-protoviewer.parse_body = function(text, ii) {
+protoviewer.parse_body = function(text, ii, filter_func) {
     if (!ii) {
         ii = 0;
     }
@@ -145,15 +145,17 @@ protoviewer.parse_body = function(text, ii) {
             ii++;
         }
         ii = protoviewer.consume_comments(text, ii);
-        var value = protoviewer.parse_value(text, ii);
+        var value = protoviewer.parse_value(text, ii, filter_func);
         if (value.position) {
             ii = value.position;
         }
         ii = protoviewer.consume_comments(text, ii);
-        if (!(name.value in result.value)) {
+        if (!filter_func || !filter_func(name.value)) {
+          if (!(name.value in result.value)) {
             result.value[name.value] = [];
+          }
+          result.value[name.value].push(value.value);
         }
-        result.value[name.value].push(value.value);
         if (value.error) {
             result.error = value.error;
             break;
@@ -203,22 +205,25 @@ protoviewer.parse_string = function(text, ii) {
             value: "",
             position: ii,
             error: "Invalid string, doesn't start with quote: " + quote,
-        }; 
+        };
     }
     var result = {
-        value: [],
+        value: [text.charAt(ii)],
         error: null,
         position: ii,
     };
     var jj = ii + 1;
+    var escape = false;
     for ( ; jj < text.length; jj++) {
-        if (text.charAt(jj) == quote) {
+        result.value.push(text.charAt(jj));
+        if (!escape && text.charAt(jj) == quote) {
             break;
         }
-        if (text.charAt(jj) == "\\") {
-            jj++;
+        if (!escape && text.charAt(jj) == "\\") {
+            escape = true;
+        } else {
+            escape = false;
         }
-        result.value.push(text.charAt(jj));
     }
     result.value = result.value.join("");
     result.position = jj;
@@ -232,21 +237,21 @@ protoviewer.parse_string = function(text, ii) {
     return result;
 };
 
-protoviewer.parse_value = function(text, ii) {
+protoviewer.parse_value = function(text, ii, filter_func) {
     if (!ii) {
         ii = 0;
     }
     if (text.charAt(ii) == "{") {
-        return protoviewer.parse_proto(text, ii);
+      return protoviewer.parse_proto(text, ii, filter_func);
     } else if (text.charAt(ii) == "[") {
-        return protoviewer.parse_list(text, ii);
+      return protoviewer.parse_list(text, ii, filter_func);
     } else {
         // we don't try to handle enums yet
         return protoviewer.parse_token(text, ii);
     }
 };
 
-protoviewer.parse_list = function(text, ii) {
+protoviewer.parse_list = function(text, ii, filter_func) {
     if (!ii) {
         ii = 0;
     }
@@ -261,7 +266,7 @@ protoviewer.parse_list = function(text, ii) {
     };
     while (text.length > ii && text.charAt(ii) != "]") {
         var old_ii = ii;
-        var item = protoviewer.parse_value(text, ii);
+        var item = protoviewer.parse_value(text, ii, filter_func);
         if (item.error) {
             result.position = item.position;
             return result;
@@ -460,7 +465,7 @@ protoviewer.is_array = function(obj) {
 };
 
 protoviewer.is_string = function(obj) {
-    return (typeof obj === 'string' || obj instanceof String);
+  return (typeof obj === 'string' || obj instanceof String);
 };
 
 protoviewer.add_child_text = function(par, text) {
@@ -534,6 +539,10 @@ protoviewer.set_expansion_by_pattern = function(ul, pattern) {
     });
 };
 
+protoviewer.filter_tree = function(proto, pattern) {
+    return 
+};
+
 protoviewer.set_expansion = function(ul, predicate) {
     var ul_has_match = false;
     for (var ii = 0; ii < ul.childNodes.length; ii++) {
@@ -564,138 +573,114 @@ protoviewer.set_expansion = function(ul, predicate) {
     return ul_has_match;
 };
 
-// Print out a proto in roughly the TextFormat style.
-// Assume that every string that parses as a Number is
-// a number.
 protoviewer.format = function(proto, flat, indent) {
-    var str = "";
-    if (!protoviewer.is_defined(indent)) {
-        indent = "";
-    }
-    for (var key in proto) {
-        for (var ii = 0; ii < proto[key].length; ii++) {
-            if (!flat) {
-                str += indent;
-            }
-            str += key;
-            if (protoviewer.is_array(proto[key][ii])) {
-                str += ": [ ";
-                for (var jj = 0; jj < proto[key][ii].length; jj++) {
-                    str += proto[key][ii][jj];
-                    if (jj < proto[key][ii].length - 1) {
-                        str += ", ";
-                    }
-                }
-                str += " ]";
-            } else if (protoviewer.is_object(proto[key][ii])) {
-                str += " { ";
-                if (!flat) {
-                    str += "\n";
-                }
-                str += protoviewer.format(proto[key][ii], flat, indent + "  ");
-                if (!flat) {
-                    str += indent;
-                }
-                str += " }";
-            } else {
-                str += ": ";
-                var num = Number(proto[key][ii]);
-                if (isNaN(num)) {
-                    str += '"';
-                }
-                str += proto[key][ii];
-                if (isNaN(num)) {
-                    str += '"';
-                }
-            }
-            if (ii < proto[key].length - 1) {
-                if (!flat) {
-                    str += "\n";
-                } else {
-                    str += " ";
-                }
-            }
+  var str = "";
+  if (!protoviewer.is_defined(indent)) {
+    indent = "";
+  }
+  for (var key in proto) {
+    for (var ii = 0; ii < proto[key].length; ii++) {
+      if (!flat) {
+        str += indent;
+      }
+      str += key;
+      if (protoviewer.is_array(proto[key][ii])) {
+        str += ": [ ";
+        for (var jj = 0; jj < proto[key][ii].length; jj++) {
+          str += proto[key][ii][jj];
+          if (jj < proto[key][ii].length - 1) {
+            str += ", ";
+          }
         }
+        str += " ]";
+      } else if (protoviewer.is_object(proto[key][ii])) {
+        str += " { ";
         if (!flat) {
-            str += "\n";
-        } else {
-            str += " ";
+          str += "\n";
         }
+        str += protoviewer.format(proto[key][ii], flat, indent + "  ");
+        if (!flat) {
+          str += indent;
+        }
+        str += " }";
+      } else {
+        str += ": ";
+        var num = Number(proto[key][ii]);
+        str += proto[key][ii];
+      }
+      if (ii < proto[key].length - 1) {
+        if (!flat) {
+          str += "\n";
+        } else {
+          str += " ";
+        }
+      }
     }
-    return str;
+    if (!flat) {
+      str += "\n";
+    } else {
+      str += " ";
+    }
+  }
+  return str;
 };
 
-// convert
-// 
-// This function makes a copy of a proto, but changes some of
-// the field names along the way.  The field names to change
-// are defined by the paths variable.  Paths should be a dict
-// where the keys are the top level fields whose names should
-// be changed.  The value is an array.  The first element
-// of the array is the new name of the field.  The second
-// element is the "paths" array for the sub-object of the
-// proto following that key.
-//
-// If the new name of a field is null, that means that we remove
-// that level of the proto entirely and move all subfields of
-// that proto one level up.
-//
-// If you have a proto {"a": [{"b": ["1"]}{"c": ["2"]}]} and
-// you convert it with path {"a": ["x", {"b": ["y", {}]}]}, you'll
-// end up with {"x": [{"y": ["1"]}{"c": ["2"]}]} 
 protoviewer.convert = function(proto, paths) {
-    var retval = {};
-    for (var key in proto) {
-        if (key in paths) {
-            if (paths[key][0] !== null) {
-                retval[paths[key][0]] = protoviewer.convert_list(proto[key], paths[key][1]);
-            } else {
-                // If the first element of the path is null, that means
-                // drop this level of the proto tree
-                var newlist = protoviewer.convert_list(proto[key], paths[key][1]);
-                for (var ii = 0; ii < newlist.length; ii++) {
-                    if (protoviewer.is_object(newlist[ii])) {
-                        // non objects just get dropped
-                        for (subkey in newlist[ii]) {
-                            retval[subkey] = newlist[ii][subkey];
-                        }
-                    }
-                }
+  var retval = {};
+  for (var key in proto) {
+    if (key in paths) {
+      if (paths[key][0] !== null) {
+        retval[paths[key][0]] = protoviewer.convert_list(proto[key], paths[key][1]);
+      } else {
+        // If the first element of the path is null, that means
+        // drop this level of the proto tree
+        var newlist = protoviewer.convert_list(proto[key], paths[key][1]);
+        for (var ii = 0; ii < newlist.length; ii++) {
+          if (protoviewer.is_object(newlist[ii])) {
+            // non objects just get dropped
+            for (subkey in newlist[ii]) {
+              retval[subkey] = newlist[ii][subkey];
             }
-        } else {
-            retval[key] = proto[key];
+          }
         }
+      }
+    } else {
+      retval[key] = proto[key];
     }
-    return retval;
+  }
+  return retval;
 };
 
-// Just a helper for convert
 protoviewer.convert_list = function(list, paths) {
-    var retval = [];
-    for (var ii = 0; ii < list.length; ii++) {
-        if (protoviewer.is_object(list[ii])) {
-            retval.push(protoviewer.convert(list[ii], paths));
-        } else {
-            retval.push(list[ii]);
-        }
+  var retval = [];
+  for (var ii = 0; ii < list.length; ii++) {
+    if (protoviewer.is_object(list[ii])) {
+      retval.push(protoviewer.convert(list[ii], paths));
+    } else {
+      retval.push(list[ii]);
     }
-    return retval;
+  }
+  return retval;
 };
 
-// protoviewer.format(protoviewer.do_convert(protoviewer.GLOBAL_PROTO.value), true)
+// protoviewer.format(protoviewer.discourse_convert(protoviewer.GLOBAL_PROTO.value), true)
 
-protoviewer.do_convert = function(proto) {
-    return protoviewer.convert(proto, {
-        'intent': ['context', {
-            'user_feature': ['feature', {
-                'feature_name': ["name", {}],
-                'feature_weight': ["value", {}],
-            }],
-            '[config]': [null, {
-                'user_field': ["field", {}],
-            }],
-        }],
-    });
+protoviewer.discourse_convert = function(proto) {
+  return protoviewer.convert(proto, {
+    'dialog_turn_intent': ['dialog_context', {
+      'user_turn_feature': ['dialog_feature', {
+        'feature_name': ["name", {}],
+        'feature_weight': ["value", {}],
+      }],
+      '[quality.dialog_manager.DialogCoreConfig.dialog_core_config]': [null, {
+        'user_turn_field': ["dialog_field", {}],
+      }],
+      'advance': [null, {}],
+      'conversation_id': [null, {}],
+      'initial_trigger': [null, {}],
+      'issued_system_turn_count': [null, {}],
+    }],
+  });
 };
 
 protoviewer.main = function() {
@@ -703,12 +688,24 @@ protoviewer.main = function() {
     var parse_button = document.getElementById("parse");
     protoviewer.add_event_listener(parse_button, "click", function() {
         var input = document.getElementById("input");
-        protoviewer.GLOBAL_PROTO = protoviewer.parse_proto(input.value);
+        var filter = document.getElementById("filter");
+        var filter_func;
+        if (filter) {
+            filter_func = function(str) {
+                return str == filter.value;
+            };
+        }
+        protoviewer.GLOBAL_PROTO = protoviewer.parse_proto(
+            input.value/*.replace(/\\/g, "\\\\")*/, 0, filter_func);
         console.log(protoviewer.GLOBAL_PROTO);
         var output = document.getElementById("tree");
         protoviewer.remove_children(output);
         protoviewer.draw_proto(output, protoviewer.GLOBAL_PROTO.value, true, true);
         CollapsibleLists.applyTo(document.getElementById('tree'));
+        var parsed = document.getElementById("parsed");
+        if (parsed) {
+            parsed.value = protoviewer.format(protoviewer.GLOBAL_PROTO.value);
+        }
     });
     var search_button = document.getElementById("search_button");
     protoviewer.add_event_listener(search_button, "click", function() {
