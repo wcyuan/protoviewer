@@ -354,6 +354,9 @@ protoviewer.make_proto_info = function(proto, attributes) {
         }
     }
     for (attr in attributes) {
+        if (!(attr in proto_info.data)) {
+            proto_info.data[attr] = [];
+        }
         proto_info.total[attr] = attributes[attr].aggregator("map", proto_info.data[attr]);
     }
     return proto_info;
