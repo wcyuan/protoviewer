@@ -785,5 +785,10 @@ protoviewer.main = function() {
         //var expand = protoviewer.get_expand_info(protoviewer.GLOBAL_PROTO, pattern);
         var tree = document.getElementById("tree");
         protoviewer.set_expansion_by_pattern(tree, pattern.value);
+        var sliced = protoviewer.slice_by_pattern(protoviewer.GLOBAL_PROTO.value, pattern.value);
+        var parsed = document.getElementById("parsed");
+        if (parsed) {
+            parsed.value = protoviewer.format(sliced);
+        }
     });
 };
