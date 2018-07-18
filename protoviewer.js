@@ -91,6 +91,12 @@ protoviewer.consume_comments = function(text, ii) {
 //
 // This is also the return value of all the "parse_..." functions
 // in this file.
+//
+// If filter_func is defined, it should either be a function that takes a
+// string and returns a bool.  This function will be applied to all field
+// names as we traverse the proto.  If it returns true for any field name,
+// that field and its value (which could be a sub-proto) will be excluded.
+//
 protoviewer.parse_proto = function(text, ii, filter_func) {
     if (!ii) {
         ii = 0;
