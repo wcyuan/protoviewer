@@ -575,22 +575,24 @@ protoviewer.filter_proto = function(proto, should_filter_func) {
 
 // return a slice of a proto: for any leaf node, if should_keep_slice_func returns true,
 // then keep it and all of its parents.
-protoviewer.proto_slice = function(proto, should_keep_slice_func, toplevel) {
-    if (!protoviewer.is_defined(toplevel)) {
-        toplevel = true;
+protoviewer.proto_slice = function(proto, should_keep_slice_func, is_toplevel) {
+    if (!protoviewer.is_defined(is_toplevel)) {
+        is_toplevel = true;
     }
     var new_proto = {};
     var keep = false;
     for (var key in proto) {
         if (should_keep_slice_func(key, {})) {
             keep = true;
+            new_proto[key] = proto[key];
+            continue;
         }
+        new_proto[key] = [];
         for (var ii = 0; ii < proto[key].length; ii++) {
-            new_proto[key] = [];
             if (protoviewer.is_sub_proto(proto[key][ii])) {
                 var sub_slice = protoviewer.proto_slice(proto[key][ii], should_keep_slice_func, false);
                 new_proto[key].push(sub_slice);
-                if (sub_slice) {
+                if (Object.keys(sub_slice).length > 0) {
                     keep = true;
                 }
             } else {
@@ -601,18 +603,21 @@ protoviewer.proto_slice = function(proto, should_keep_slice_func, toplevel) {
             }
         }
     }
-    if (keep || toplevel) {
+    if (keep || is_toplevel) {
         return new_proto;
     }
     return {};
 };
 
-protoviewer.slice_by_pattern = function(proto, pattern) {
+protoviewer.slice_by_pattern = function(proto, pattern, is_toplevel) {
     return protoviewer.proto_slice(
         proto,
         function(name, val) {
-            return protoviewer.matches_pattern(protoviewer.format({name: [val]}), pattern);
-        });
+            var obj = {};
+            obj[name] = [val];
+            return protoviewer.matches_pattern(protoviewer.format(obj), pattern);
+        },
+        is_toplevel);
 }
 
 protoviewer.set_expansion = function(ul, predicate) {
