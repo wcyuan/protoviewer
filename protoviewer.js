@@ -473,6 +473,10 @@ protoviewer.is_array = function(obj) {
     return Array.isArray(obj);
 };
 
+protoviewer.is_sub_proto = function(obj) {
+    return protoviewer.is_object(obj) && !protoviewer.is_array(obj);
+};
+
 protoviewer.is_string = function(obj) {
   return (typeof obj === 'string' || obj instanceof String);
 };
@@ -548,9 +552,60 @@ protoviewer.set_expansion_by_pattern = function(ul, pattern) {
     });
 };
 
-protoviewer.filter_tree = function(proto, pattern) {
-    return 
+// Given a proto, create a new proto which is like the original,
+// except that we pass each field name to should_filter_func and
+// if that function returns true, we remove that field.
+protoviewer.filter_proto = function(proto, should_filter_func) {
+    var new_proto = {};
+    for (var key in proto) {
+        if (should_filter_func(key)) {
+            continue;
+        }
+        new_proto[key] = [];
+        for (var ii = 0; ii < proto[key].length; ii++) {
+            if (protoviewer.is_sub_proto(proto[key][ii])) {
+                new_proto[key].push(protoviewer.filter_proto(proto[key][ii], should_filter_func));
+            } else {
+                new_proto[key].push(proto[key][ii]);
+            }
+        }
+    }
+    return new_proto;
 };
+
+// return a slice of a proto: for any leaf node, if should_keep_slice_func returns true,
+// then keep it and all of its parents.
+//
+// This isn't quite working yet...
+protoviewer.proto_slice = function(proto, should_keep_slice_func) {
+    var new_proto = {};
+    for (var key in proto) {
+        for (var ii = 0; ii < proto[key].length; ii++) {
+            if (protoviewer.is_sub_proto(proto[key][ii])) {
+                if (!(key in new_proto)) {
+                    new_proto[key] = [];
+                }
+                new_proto[key].push(protoviewer.proto_slice(proto[key][ii], should_keep_slice_func));
+            } else {
+                if (should_keep_slice_func(key, proto[key][ii])) {
+                    if (!(key in new_proto)) {
+                        new_proto[key] = [];
+                    }
+                    new_proto[key].push(proto[key][ii]);
+                }
+            }
+        }
+    }
+    return new_proto;
+};
+
+protoviewer.slice_by_pattern = function(proto, pattern) {
+    return protoviewer.proto_slice(
+        proto,
+        function(name, val) {
+            return protoviewer.matches_pattern(protoviewer.format(val), pattern);
+        });
+}
 
 protoviewer.set_expansion = function(ul, predicate) {
     var ul_has_match = false;
