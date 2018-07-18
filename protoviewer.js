@@ -575,35 +575,43 @@ protoviewer.filter_proto = function(proto, should_filter_func) {
 
 // return a slice of a proto: for any leaf node, if should_keep_slice_func returns true,
 // then keep it and all of its parents.
-//
-// This isn't quite working yet...
-protoviewer.proto_slice = function(proto, should_keep_slice_func) {
+protoviewer.proto_slice = function(proto, should_keep_slice_func, toplevel) {
+    if (!protoviewer.is_defined(toplevel)) {
+        toplevel = true;
+    }
     var new_proto = {};
+    var keep = false;
     for (var key in proto) {
+        if (should_keep_slice_func(key, {})) {
+            keep = true;
+        }
         for (var ii = 0; ii < proto[key].length; ii++) {
+            new_proto[key] = [];
             if (protoviewer.is_sub_proto(proto[key][ii])) {
-                if (!(key in new_proto)) {
-                    new_proto[key] = [];
+                var sub_slice = protoviewer.proto_slice(proto[key][ii], should_keep_slice_func, false);
+                new_proto[key].push(sub_slice);
+                if (sub_slice) {
+                    keep = true;
                 }
-                new_proto[key].push(protoviewer.proto_slice(proto[key][ii], should_keep_slice_func));
             } else {
                 if (should_keep_slice_func(key, proto[key][ii])) {
-                    if (!(key in new_proto)) {
-                        new_proto[key] = [];
-                    }
-                    new_proto[key].push(proto[key][ii]);
+                    keep = true;
                 }
+                new_proto[key].push(proto[key][ii]);
             }
         }
     }
-    return new_proto;
+    if (keep || toplevel) {
+        return new_proto;
+    }
+    return {};
 };
 
 protoviewer.slice_by_pattern = function(proto, pattern) {
     return protoviewer.proto_slice(
         proto,
         function(name, val) {
-            return protoviewer.matches_pattern(protoviewer.format(val), pattern);
+            return protoviewer.matches_pattern(protoviewer.format({name: [val]}), pattern);
         });
 }
 
