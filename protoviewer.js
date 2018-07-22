@@ -531,8 +531,19 @@ protoviewer.remove_children = function(node) {
     }
 };
 
+protoviewer.maybe_regexp = function(pattern) {
+    try { var maybe_regexp = eval(pattern) } catch { };
+    return maybe_regexp;
+};
+
 protoviewer.matches_pattern = function(string, pattern, case_sensitive) {
-    if (case_sensitive) {
+    if (!protoviewer.is_string(string)) {
+        return false;
+    }
+    var maybe_regexp = protoviewer.maybe_regexp(pattern);
+    if (maybe_regexp instanceof RegExp) {
+        return maybe_regexp.test(string);
+    } else if (case_sensitive) {
         return string.includes(pattern);
     } else {
         return string.toLowerCase().includes(pattern.toLowerCase());
@@ -767,10 +778,17 @@ protoviewer.main = function() {
         var input = document.getElementById("input");
         var filter = document.getElementById("filter");
         var filter_func;
-        if (filter) {
-            filter_func = function(str) {
-                return str == filter.value;
-            };
+        if (filter && filter.value) {
+            var maybe_regexp = protoviewer.maybe_regexp(filter.value);
+            if (maybe_regexp instanceof RegExp) {
+                filter_func = function(str) {
+                    return protoviewer.matches_pattern(str, filter.value);
+                };
+            } else {
+                filter_func = function(str) {
+                    return str == filter.value;
+                };
+            }
         }
         protoviewer.GLOBAL_PROTO = protoviewer.parse_proto(
             input.value/*.replace(/\\/g, "\\\\")*/, 0, filter_func);
