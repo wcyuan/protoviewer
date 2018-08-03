@@ -134,6 +134,7 @@ protoviewer.parse_body = function(text, ii, filter_func) {
         position: ii,
         error: null,
     };
+    ii = protoviewer.consume_comments(text, ii);
     while (text.length > ii && text.charAt(ii) != "}") {
         var old_ii = ii;
         ii = protoviewer.consume_comments(text, ii);
