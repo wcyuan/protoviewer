@@ -778,17 +778,30 @@ protoviewer.main = function() {
     protoviewer.add_event_listener(parse_button, "click", function() {
         var input = document.getElementById("input");
         var filter = document.getElementById("filter");
+        var should_reverse = document.getElementById("reverse_filter");
         var filter_func;
         if (filter && filter.value) {
             var maybe_regexp = protoviewer.maybe_regexp(filter.value);
             if (maybe_regexp instanceof RegExp) {
-                filter_func = function(str) {
-                    return protoviewer.matches_pattern(str, filter.value);
-                };
+                if (should_reverse && should_reverse.checked) {
+                    filter_func = function(str) {
+                        return !protoviewer.matches_pattern(str, filter.value);
+                    };
+                } else {
+                    filter_func = function(str) {
+                        return protoviewer.matches_pattern(str, filter.value);
+                    };
+                }
             } else {
-                filter_func = function(str) {
-                    return str == filter.value;
-                };
+                if (should_reverse && should_reverse.checked) {
+                    filter_func = function(str) {
+                        return str != filter.value;
+                    };
+                } else {
+                    filter_func = function(str) {
+                        return str == filter.value;
+                    };
+                }
             }
         }
         protoviewer.GLOBAL_PROTO = protoviewer.parse_proto(
